@@ -28,7 +28,7 @@
     "vNet": {
       "AddressPrefix": "[parameters('vNetAddressPrefix')]",
       "SubnetPrefix": "[parameters('SubnetPrefix')]",
-      "SubnetName": "Subnet"
+      "SubnetName": "AzureFirewallSubnet"
     },
     "azfwRouteTableName": "AzfwRouteTable",
     "firewallName": "AzureFirewall",
