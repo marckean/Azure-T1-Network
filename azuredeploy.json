@@ -26,15 +26,15 @@
   },
   "variables": {
     "vNet": {
-      "AddressPrefix": "parameters('vNetAddressPrefix')",
-      "SubnetPrefix": "parameters('SubnetPrefix')",
+      "AddressPrefix": "[parameters('vNetAddressPrefix')]",
+      "SubnetPrefix": "[parameters('SubnetPrefix')]",
       "SubnetName": "Subnet"
     },
     "azfwRouteTableName": "AzfwRouteTable",
-    "firewallName": "",
+    "firewallName": "AzureFirewall",
     "PublicIPName": "PublicIP",
-    "SubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vNetName'), variables('vNet').SubnetName)]",
-    "PublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('PublicIPName'))]"
+    "SubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), variables('vNet').SubnetName)]",
+    "PublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIPName'))]"
   },
   "resources": [
     {
@@ -103,7 +103,7 @@
     },
     {
       "apiVersion": "2018-07-01",
-      "type": "Microsoft.Network/s",
+      "type": "Microsoft.Network/azureFirewalls",
       "name": "[variables('firewallName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
