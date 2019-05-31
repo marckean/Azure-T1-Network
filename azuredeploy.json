@@ -4,16 +4,16 @@
   "parameters": {
     "vNetName": {
       "type": "string",
-      "defaultValue": "T3vNet",
+      "defaultValue": "T1vNet",
       "metadata": {
-        "description": "T3 virtual network name"
+        "description": "T1 virtual network name"
       }
     },
     "vNetAddressPrefix": {
       "type": "string",
       "defaultValue": "10.0.8.0/25",
       "metadata": {
-        "description": "T3 virtual AddressPrefix"
+        "description": "T1 virtual AddressPrefix"
       }
     },
     "SubnetPrefix": {
