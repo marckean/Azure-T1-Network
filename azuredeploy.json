@@ -1,0 +1,224 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vNetName": {
+      "type": "string",
+      "defaultValue": "ServersvNet",
+      "metadata": {
+        "description": "virtual network name"
+      }
+    }
+  },
+  "variables": {
+    "vNet": {
+      "AddressPrefix": "10.0.8.0/26",
+      "azureFirewallSubnetPrefix": "10.0.8.0/26",
+      "azureFirewallSubnetName": "AzureFirewallSubnet"
+    },
+    "azfwRouteTableName": "AzfwRouteTable",
+    "firewallName": "AzureFirewall",
+    "AzureFirewallPublicIPName": "AzureFirewallPublicIP",
+    "azureFirewallSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vNetName'), variables('vNet').azureFirewallSubnetName)]",
+    "azureFirewallPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('AzureFirewallPublicIPName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/routeTables",
+      "name": "[variables('azfwRouteTableName')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "disableBgpRoutePropagation": false,
+        "routes": [
+          {
+            "name": "azfwInternetAccess",
+            "properties": {
+              "addressPrefix": "0.0.0.0/0",
+              "nextHopType": "Internet"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('vNetName')]",
+      "apiVersion": "2017-06-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "[parameters('vNetName')]"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vNet').AddressPrefix]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vNet').azureFirewallSubnetName]",
+            "properties": {
+              "addressPrefix": "[variables('vNet').azureFirewallSubnetPrefix]"
+            }
+          }
+        ]
+      },
+      "resources": [
+       
+      ]
+    },
+    {
+      "apiVersion": "2018-07-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('AzureFirewallPublicIPName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
+        "dnsSettings": {
+          "domainNameLabel": "[concat('pip', uniqueString(resourceGroup().name))]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2018-07-01",
+      "type": "Microsoft.Network/azureFirewalls",
+      "name": "[variables('firewallName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "IpConf",
+            "properties": {
+              "subnet": {
+                "id": "[variables('azureFirewallSubnetId')]"
+              },
+              "PublicIPAddress": {
+                "id": "[variables('azureFirewallPublicIpId')]"
+              }
+            }
+          }
+        ],
+        "applicationRuleCollections": [
+          {
+            "name": "appRc1",
+            "properties": {
+              "priority": 101,
+              "action": {
+                "type": "Allow"
+              },
+              "rules": [
+                {
+                  "name": "appRule1",
+                  "protocols": [
+                    {
+                      "port": "80",
+                      "protocolType": "http"
+                    },
+                    {
+                      "port": "443",
+                      "protocolType": "https"
+                    }
+                  ],
+                  "targetFqdns": [
+                    "*microsoft.com"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "networkRuleCollections": [
+          {
+            "name": "netRc1",
+            "properties": {
+              "priority": 200,
+              "action": {
+                "type": "Allow"
+              },
+              "rules": [
+                {
+                  "name": "netRule1",
+                  "protocols": [
+                    "TCP"
+                  ],
+                  "sourceAddresses": [
+                    "192.168.2.0/24"
+                  ],
+                  "destinationAddresses": [
+                    "*"
+                  ],
+                  "destinationPorts": [
+                    "8000-8999"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "natRuleCollections": [
+          {
+            "name": "MarcNat",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "priority": 100,
+              "action": {
+                "type": "Dnat"
+              },
+              "rules": [
+                {
+                  "name": "JumpRDP",
+                  "protocols": [
+                    "TCP"
+                  ],
+                  "translatedAddress": "10.0.0.4",
+                  "translatedPort": "3389",
+                  "sourceAddresses": [
+                    "*"
+                  ],
+                  "destinationAddresses": [
+                    "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName')), '2017-10-01', 'Full').properties.ipAddress]"
+                  ],
+                  "destinationPorts": [
+                    "3390"
+                  ]
+                },
+                {
+                  "name": "ServerRDP",
+                  "protocols": [
+                    "TCP"
+                  ],
+                  "translatedAddress": "10.0.2.4",
+                  "translatedPort": "3389",
+                  "sourceAddresses": [
+                    "*"
+                  ],
+                  "destinationAddresses": [
+                    "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName')), '2017-10-01', 'Full').properties.ipAddress]"
+                  ],
+                  "destinationPorts": [
+                    "3391"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "resourceID": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/publicIPAddresses', variables('AzureFirewallPublicIPName'))]"
+    }
+  }
+}
