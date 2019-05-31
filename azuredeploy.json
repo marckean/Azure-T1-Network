@@ -4,23 +4,37 @@
   "parameters": {
     "vNetName": {
       "type": "string",
-      "defaultValue": "ServersvNet",
+      "defaultValue": "T3vNet",
       "metadata": {
-        "description": "virtual network name"
+        "description": "T3 virtual network name"
+      }
+    },
+    "vNetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.8.0/25",
+      "metadata": {
+        "description": "T3 virtual AddressPrefix"
+      }
+    },
+    "SubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.8.0/26",
+      "metadata": {
+        "description": "Azure Firewall subnet prefix. The minimum size of the Subnet subnet is /26"
       }
     }
   },
   "variables": {
     "vNet": {
-      "AddressPrefix": "10.0.8.0/26",
-      "azureFirewallSubnetPrefix": "10.0.8.0/26",
-      "azureFirewallSubnetName": "AzureFirewallSubnet"
+      "AddressPrefix": "parameters('vNetAddressPrefix')",
+      "SubnetPrefix": "parameters('SubnetPrefix')",
+      "SubnetName": "Subnet"
     },
     "azfwRouteTableName": "AzfwRouteTable",
-    "firewallName": "AzureFirewall",
-    "AzureFirewallPublicIPName": "AzureFirewallPublicIP",
-    "azureFirewallSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vNetName'), variables('vNet').azureFirewallSubnetName)]",
-    "azureFirewallPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('AzureFirewallPublicIPName'))]"
+    "firewallName": "",
+    "PublicIPName": "PublicIP",
+    "SubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vNetName'), variables('vNet').SubnetName)]",
+    "PublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('PublicIPName'))]"
   },
   "resources": [
     {
@@ -57,9 +71,12 @@
         },
         "subnets": [
           {
-            "name": "[variables('vNet').azureFirewallSubnetName]",
+            "name": "[variables('vNet').SubnetName]",
             "properties": {
-              "addressPrefix": "[variables('vNet').azureFirewallSubnetPrefix]"
+              "addressPrefix": "[variables('vNet').SubnetPrefix]",
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', variables('azfwRouteTableName'))]"
+              }
             }
           }
         ]
@@ -71,7 +88,7 @@
     {
       "apiVersion": "2018-07-01",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('AzureFirewallPublicIPName')]",
+      "name": "[variables('PublicIPName')]",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Standard"
@@ -86,12 +103,12 @@
     },
     {
       "apiVersion": "2018-07-01",
-      "type": "Microsoft.Network/azureFirewalls",
+      "type": "Microsoft.Network/s",
       "name": "[variables('firewallName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]",
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName'))]"
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('PublicIPName'))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -99,10 +116,10 @@
             "name": "IpConf",
             "properties": {
               "subnet": {
-                "id": "[variables('azureFirewallSubnetId')]"
+                "id": "[variables('SubnetId')]"
               },
               "PublicIPAddress": {
-                "id": "[variables('azureFirewallPublicIpId')]"
+                "id": "[variables('PublicIpId')]"
               }
             }
           }
@@ -129,7 +146,8 @@
                     }
                   ],
                   "targetFqdns": [
-                    "*microsoft.com"
+                    "*microsoft.com",
+                    "*azure.com"
                   ]
                 }
               ]
@@ -165,52 +183,7 @@
           }
         ],
         "natRuleCollections": [
-          {
-            "name": "MarcNat",
-            "properties": {
-              "provisioningState": "Succeeded",
-              "priority": 100,
-              "action": {
-                "type": "Dnat"
-              },
-              "rules": [
-                {
-                  "name": "JumpRDP",
-                  "protocols": [
-                    "TCP"
-                  ],
-                  "translatedAddress": "10.0.0.4",
-                  "translatedPort": "3389",
-                  "sourceAddresses": [
-                    "*"
-                  ],
-                  "destinationAddresses": [
-                    "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName')), '2017-10-01', 'Full').properties.ipAddress]"
-                  ],
-                  "destinationPorts": [
-                    "3390"
-                  ]
-                },
-                {
-                  "name": "ServerRDP",
-                  "protocols": [
-                    "TCP"
-                  ],
-                  "translatedAddress": "10.0.2.4",
-                  "translatedPort": "3389",
-                  "sourceAddresses": [
-                    "*"
-                  ],
-                  "destinationAddresses": [
-                    "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('AzureFirewallPublicIPName')), '2017-10-01', 'Full').properties.ipAddress]"
-                  ],
-                  "destinationPorts": [
-                    "3391"
-                  ]
-                }
-              ]
-            }
-          }
+
         ]
       }
     }
@@ -218,7 +191,7 @@
   "outputs": {
     "resourceID": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Network/publicIPAddresses', variables('AzureFirewallPublicIPName'))]"
+      "value": "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIPName'))]"
     }
   }
 }
