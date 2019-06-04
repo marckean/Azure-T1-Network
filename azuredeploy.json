@@ -60,6 +60,9 @@
       "apiVersion": "2017-06-01",
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/routeTables', variables('azfwRouteTableName'))]"
+      ],
       "tags": {
         "displayName": "[parameters('vNetName')]"
       },
