@@ -27,10 +27,10 @@
       "type": "array",
       "defaultValue": [
           {
-              "name": "AzureFirewallSubnet", "addressPrefix": ["10.0.8.0/26"], "RouteTableName": "AzfwRouteTable"
+            "name": "AzureFirewallSubnet", "addressPrefix": "10.0.8.0/26", "RouteTableName": "AzfwRouteTable"
           },
           {
-              "name": "PublicApp01", "addressPrefix": ["10.0.8.64/27"], "RouteTableName": "T1RouteTable"
+            "name": "PublicApp01", "addressPrefix": "10.0.8.64/27", "RouteTableName": "T1RouteTable"
           }
       ],
       "metadata": {
@@ -100,7 +100,9 @@
       },
       "properties": {
         "addressSpace": {
-          "addressPrefixes": "[parameters('vNetAddressPrefix')]"
+          "addressPrefixes": [
+            "[parameters('vNetAddressPrefix')]"
+          ]
         },
         "copy": [
           {
