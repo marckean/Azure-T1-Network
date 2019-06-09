@@ -16,24 +16,36 @@
         "description": "T1 virtual AddressPrefix"
       }
     },
-    "SubnetPrefix": {
+    "T1VirtualApplianceVIP": {
       "type": "string",
-      "defaultValue": "10.0.8.0/26",
+      "defaultValue": "10.0.8.4",
       "metadata": {
-        "description": "Azure Firewall subnet prefix. The minimum size of the Subnet subnet is /26"
+        "description": "Internal VIP of the T1 virtual appliance for access from the T2 networks"
+      }
+    },
+    "subnetArray": {
+      "type": "array",
+      "defaultValue": [
+          {
+              "name": "AzureFirewallSubnet", "addressPrefix": ["10.0.8.0/26"], "RouteTableName": "AzfwRouteTable"
+          },
+          {
+              "name": "PublicApp01", "addressPrefix": ["10.0.8.64/27"], "RouteTableName": "T1RouteTable"
+          }
+      ],
+      "metadata": {
+          "description": "Array of spoke objects. See defaultValue for example."
       }
     }
   },
   "variables": {
-    "vNet": {
-      "AddressPrefix": "[parameters('vNetAddressPrefix')]",
-      "SubnetPrefix": "[parameters('SubnetPrefix')]",
-      "SubnetName": "AzureFirewallSubnet"
-    },
     "azfwRouteTableName": "AzfwRouteTable",
+    "azfwRouteName": "azfwInternetAccess",
+    "T1RouteTableName": "T1RouteTable",
+    "T1RouteName": "T1Traffic",
     "firewallName": "AzureFirewall",
     "PublicIPName": "PublicIP",
-    "SubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), variables('vNet').SubnetName)]",
+    "azfwSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), 'AzureFirewallSubnet')]",
     "PublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIPName'))]"
   },
   "resources": [
@@ -46,10 +58,29 @@
         "disableBgpRoutePropagation": false,
         "routes": [
           {
-            "name": "azfwInternetAccess",
+            "name": "[variables('azfwRouteName')]",
             "properties": {
               "addressPrefix": "0.0.0.0/0",
               "nextHopType": "Internet"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/routeTables",
+      "name": "[variables('T1RouteTableName')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "disableBgpRoutePropagation": false,
+        "routes": [
+          {
+            "name": "[variables('T1RouteName')]",
+            "properties": {
+              "addressPrefix": "0.0.0.0/0",
+              "nextHopType": "VirtualAppliance",
+              "nextHopIpAddress": "[parameters('T1VirtualApplianceVIP')]"
             }
           }
         ]
@@ -61,31 +92,33 @@
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/routeTables', variables('azfwRouteTableName'))]"
+        "[concat('Microsoft.Network/routeTables/', variables('azfwRouteTableName'))]",
+        "[concat('Microsoft.Network/routeTables/', variables('T1RouteTableName'))]"
       ],
       "tags": {
         "displayName": "[parameters('vNetName')]"
       },
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [
-            "[variables('vNet').AddressPrefix]"
-          ]
+          "addressPrefixes": "[parameters('vNetAddressPrefix')]"
         },
-        "subnets": [
+        "copy": [
           {
-            "name": "[variables('vNet').SubnetName]",
-            "properties": {
-              "addressPrefix": "[variables('vNet').SubnetPrefix]",
-              "routeTable": {
-                "id": "[resourceId('Microsoft.Network/routeTables', variables('azfwRouteTableName'))]"
+            "name": "subnets",
+            "count": "[length(parameters('subnetArray'))]",
+            "input": {
+              "name": "[parameters('subnetArray')[copyIndex('subnets')].name]",
+              "properties": {
+                "addressPrefix": "[parameters('subnetArray')[copyIndex('subnets')].addressPrefix]",
+                "routeTable": {
+                  "id": "[resourceId('Microsoft.Network/routeTables', parameters('subnetArray')[copyIndex('subnets')].RouteTableName)]"
+                }
               }
             }
           }
         ]
       },
       "resources": [
-       
       ]
     },
     {
@@ -119,7 +152,7 @@
             "name": "IpConf",
             "properties": {
               "subnet": {
-                "id": "[variables('SubnetId')]"
+                "id": "[variables('azfwSubnetId')]"
               },
               "PublicIPAddress": {
                 "id": "[variables('PublicIpId')]"
