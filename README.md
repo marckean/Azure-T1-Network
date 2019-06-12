@@ -5,7 +5,7 @@ This **part 1** of a 5 part series of templates to deploy a glorified 3 tier Azu
     - *Resource Group based template*
     - Most un-trusted tier, as it has access to the internet
     - The Azure Firewall is deployed - you could use two IaaS based NVAs and a couple of load balancers, however the [Azure Firewall](https://docs.microsoft.com/en-us/azure/firewall/overview) is PaaS, it's already highly available and scalable.
-<p align="center">  <img src="AzureNetworkT1.jpg" height="200"></p>
+<p align="center"><img src="AzureNetworkT1.jpg" height="200"></p>
 
 2. https://github.com/marckean/Azure-T2-Network
     - *Resource Group based template*
