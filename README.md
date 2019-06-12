@@ -63,10 +63,6 @@ If you want to deploy a customised version of this deployment in a separate envi
 
 For this **Tier 1** repo, be sure to edit the parameters
 
-<p align="center">
-  <img src="Annotation 2019-06-12 114057.jpg" width=80%>
-</p>
-
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmarckean%2FAzure-T1-Network%2Fmaster%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
